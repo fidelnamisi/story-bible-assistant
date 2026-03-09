@@ -14,6 +14,21 @@ app.use(express.static('public'));
 
 const PROJECTS_DIR = path.join(__dirname, 'projects');
 const MAX_CONTEXT_CHARS = 120000;
+const MODELS_FILE = path.join(__dirname, 'models.json');
+
+async function readModels() {
+    try {
+        const data = await fs.readFile(MODELS_FILE, 'utf8');
+        return JSON.parse(data);
+    } catch (err) {
+        // If file doesn't exist, return empty array
+        return [];
+    }
+}
+
+async function writeModels(models) {
+    await fs.writeFile(MODELS_FILE, JSON.stringify(models, null, 2), 'utf8');
+}
 
 /**
  * Reads all supported files in a project folder and returns combined text.
@@ -33,39 +48,47 @@ async function readProjectFiles(projectName) {
     let combinedText = '';
     const fileNames = [];
     let totalCharacters = 0;
-
-    const files = await fs.readdir(projectPath);
     const supportedExts = ['.txt', '.md', '.docx', '.pdf'];
 
-    for (const file of files) {
-        const ext = path.extname(file).toLowerCase();
-        if (!supportedExts.includes(ext)) {
-            continue; // skip unsupported file types silently
-        }
+    // Recursive walk through directory
+    async function walkDir(dir, relativePrefix = '') {
+        const entries = await fs.readdir(dir, { withFileTypes: true });
+        for (const entry of entries) {
+            const fullPath = path.join(dir, entry.name);
+            const relativePath = relativePrefix ? path.join(relativePrefix, entry.name) : entry.name;
+            if (entry.isDirectory()) {
+                await walkDir(fullPath, relativePath);
+            } else {
+                const ext = path.extname(entry.name).toLowerCase();
+                if (!supportedExts.includes(ext)) {
+                    continue;
+                }
 
-        const filePath = path.join(projectPath, file);
-        let fileText = '';
+                let fileText = '';
+                try {
+                    if (ext === '.txt' || ext === '.md') {
+                        fileText = await fs.readFile(fullPath, 'utf8');
+                    } else if (ext === '.docx') {
+                        const result = await mammoth.extractRawText({ path: fullPath });
+                        fileText = result.value;
+                    } else if (ext === '.pdf') {
+                        const dataBuffer = await fs.readFile(fullPath);
+                        const pdfData = await pdfParse(dataBuffer);
+                        fileText = pdfData.text;
+                    }
+                } catch (err) {
+                    console.warn(`Could not read ${relativePath}: ${err.message}`);
+                    continue;
+                }
 
-        try {
-            if (ext === '.txt' || ext === '.md') {
-                fileText = await fs.readFile(filePath, 'utf8');
-            } else if (ext === '.docx') {
-                const result = await mammoth.extractRawText({ path: filePath });
-                fileText = result.value;
-            } else if (ext === '.pdf') {
-                const dataBuffer = await fs.readFile(filePath);
-                const pdfData = await pdfParse(dataBuffer);
-                fileText = pdfData.text;
+                fileNames.push(relativePath);
+                totalCharacters += fileText.length;
+                combinedText += `\n\n=== FILE: ${relativePath} ===\n\n${fileText}`;
             }
-        } catch (err) {
-            console.warn(`Could not read ${file}: ${err.message}`);
-            continue;
         }
-
-        fileNames.push(file);
-        totalCharacters += fileText.length;
-        combinedText += `\n\n=== FILE: ${file} ===\n\n${fileText}`;
     }
+
+    await walkDir(projectPath);
 
     // Trim leading newline
     if (combinedText.startsWith('\n\n')) {
@@ -117,18 +140,100 @@ app.get('/status/:project', async (req, res) => {
     }
 });
 
+// ==================== AI Model Management ====================
+
+// GET /api/models – list all saved models (without exposing API keys)
+app.get('/api/models', async (req, res) => {
+    try {
+        const models = await readModels();
+        // Return safe versions (strip apiKey)
+        const safeModels = models.map(({ id, name, baseURL, modelName }) => ({
+            id,
+            name,
+            baseURL,
+            modelName
+        }));
+        res.json(safeModels);
+    } catch (err) {
+        console.error('Error reading models:', err);
+        res.status(500).json({ error: 'Could not load models.' });
+    }
+});
+
+// POST /api/models – add a new model
+app.post('/api/models', async (req, res) => {
+    try {
+        const { name, baseURL, apiKey, modelName } = req.body;
+        if (!name || !baseURL || !apiKey || !modelName) {
+            return res.status(400).json({ error: 'All fields (name, baseURL, apiKey, modelName) are required.' });
+        }
+        const models = await readModels();
+        const id = Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
+        const newModel = { id, name, baseURL, apiKey, modelName };
+        models.push(newModel);
+        await writeModels(models);
+        // Return the safe version
+        const { apiKey: _, ...safeModel } = newModel;
+        res.status(201).json(safeModel);
+    } catch (err) {
+        console.error('Error adding model:', err);
+        res.status(500).json({ error: 'Failed to add model.' });
+    }
+});
+
+// PUT /api/models/:id – update an existing model
+app.put('/api/models/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, baseURL, apiKey, modelName } = req.body;
+        const models = await readModels();
+        const index = models.findIndex(m => m.id === id);
+        if (index === -1) {
+            return res.status(404).json({ error: 'Model not found.' });
+        }
+        // Update only provided fields (allow partial update)
+        if (name !== undefined) models[index].name = name;
+        if (baseURL !== undefined) models[index].baseURL = baseURL;
+        if (apiKey !== undefined) models[index].apiKey = apiKey;
+        if (modelName !== undefined) models[index].modelName = modelName;
+        await writeModels(models);
+        const { apiKey: _, ...safeModel } = models[index];
+        res.json(safeModel);
+    } catch (err) {
+        console.error('Error updating model:', err);
+        res.status(500).json({ error: 'Failed to update model.' });
+    }
+});
+
+// DELETE /api/models/:id – delete a model
+app.delete('/api/models/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const models = await readModels();
+        const filtered = models.filter(m => m.id !== id);
+        if (filtered.length === models.length) {
+            return res.status(404).json({ error: 'Model not found.' });
+        }
+        await writeModels(filtered);
+        res.status(204).send();
+    } catch (err) {
+        console.error('Error deleting model:', err);
+        res.status(500).json({ error: 'Failed to delete model.' });
+    }
+});
+
 // POST /query – ask a question about a project
 app.post('/query', async (req, res) => {
     try {
-        const { project, question } = req.body;
+        const { project, question, modelId } = req.body;
         if (!project || !question) {
             return res.status(400).json({ error: 'Both "project" and "question" are required.' });
         }
 
         const { combinedText, fileNames } = await readProjectFiles(project);
         if (fileNames.length === 0) {
-            return res.status(400).json({ 
-                error: 'No readable files found in this project. Please add .txt, .md, .docx or .pdf files.' 
+            return res.status(400).json({
+                error: 'No readable files found in this project. Please add .txt, .md, .docx or .pdf files.'
             });
         }
 
@@ -136,19 +241,34 @@ app.post('/query', async (req, res) => {
 
         const userMessage = `Project: ${project}\n\nSource documents:\n\n${combinedText}\n\n---\n\nQuestion: ${question}`;
 
-        const apiKey = process.env.DEEPSEEK_API_KEY;
-        if (!apiKey || apiKey === 'your_api_key_here') {
-            return res.status(500).json({ error: 'DeepSeek API key not configured. Please set DEEPSEEK_API_KEY in .env' });
+        let apiKey, baseURL, modelName;
+        if (modelId) {
+            const models = await readModels();
+            const model = models.find(m => m.id === modelId);
+            if (!model) {
+                return res.status(400).json({ error: 'Selected AI model not found.' });
+            }
+            apiKey = model.apiKey;
+            baseURL = model.baseURL;
+            modelName = model.modelName;
+        } else {
+            // Fallback to default DeepSeek configuration
+            apiKey = process.env.DEEPSEEK_API_KEY;
+            if (!apiKey || apiKey === 'your_api_key_here') {
+                return res.status(500).json({ error: 'DeepSeek API key not configured. Please set DEEPSEEK_API_KEY in .env' });
+            }
+            baseURL = 'https://api.deepseek.com/v1/chat/completions';
+            modelName = 'deepseek-chat';
         }
 
-        const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+        const response = await fetch(baseURL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${apiKey}`
             },
             body: JSON.stringify({
-                model: 'deepseek-chat',
+                model: modelName,
                 max_tokens: 1024,
                 messages: [
                     { role: 'system', content: systemMessage },
@@ -159,14 +279,14 @@ app.post('/query', async (req, res) => {
 
         if (!response.ok) {
             const errorText = await response.text();
-            console.error('DeepSeek API error:', errorText);
+            console.error('AI API error:', errorText);
             throw new Error(`API request failed with status ${response.status}`);
         }
 
         const data = await response.json();
         const answer = data.choices[0].message.content;
 
-        res.json({ answer, project });
+        res.json({ answer, project, modelId: modelId || 'default' });
     } catch (err) {
         console.error('Query error:', err);
         res.status(500).json({ error: err.message || 'An unexpected error occurred.' });

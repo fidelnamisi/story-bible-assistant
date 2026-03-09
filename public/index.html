@@ -334,15 +334,165 @@
                 width: 100%;
             }
         }
+
+        /* AI Models button */
+        .models-button {
+            background-color: var(--surface-light);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-left: 0.5rem;
+        }
+
+        .models-button:hover {
+            background-color: var(--accent);
+            color: #111;
+            border-color: var(--accent);
+        }
+
+        /* Model dropdown */
+        .model-selector {
+            background-color: var(--surface-light);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+            color: var(--text-primary);
+            width: 100%;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Modal overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 1rem;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Modal content */
+        .modal-content {
+            background-color: var(--surface);
+            border-radius: 0.75rem;
+            border: 1px solid var(--border);
+            max-width: 700px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 2rem;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            color: var(--accent);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: var(--accent);
+        }
+
+        /* Model list */
+        .model-list {
+            margin-bottom: 2rem;
+        }
+
+        .model-item {
+            background-color: var(--surface-light);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .model-item-info h4 {
+            margin: 0 0 0.25rem;
+            color: var(--text-primary);
+        }
+
+        .model-item-info p {
+            margin: 0;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .model-item-actions button {
+            margin-left: 0.5rem;
+        }
+
+        /* Form */
+        .model-form label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .model-form input {
+            width: 100%;
+            background-color: var(--surface-light);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            color: var(--text-primary);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+            padding: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .model-form input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
     </style>
 </head>
 <body>
     <header>
         <div class="container header-inner">
             <div class="logo">Story Bible Assistant</div>
-            <div class="project-pill">
-                <span class="project-name">No project selected</span>
-                <span class="file-count">· 0 files</span>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <div class="project-pill">
+                    <span class="project-name">No project selected</span>
+                    <span class="file-count">· 0 files</span>
+                </div>
+                <button class="models-button" id="modelsButton">AI Models</button>
             </div>
         </div>
     </header>
@@ -360,6 +510,13 @@
 
         <section class="query-panel">
             <h2>Ask about the story</h2>
+            <div style="margin-bottom: 1.5rem;">
+                <label for="modelSelector" style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">AI Model</label>
+                <select id="modelSelector" class="model-selector">
+                    <option value="">DeepSeek (default)</option>
+                    <!-- Models will be populated by JavaScript -->
+                </select>
+            </div>
             <textarea id="questionInput" placeholder="e.g. How does the young prince address his stepmother in dialogue — formally, or by name?" rows="5"></textarea>
 
             <div class="example-chips">
@@ -390,10 +547,49 @@
         </div>
     </footer>
 
+    <!-- AI Models Modal -->
+    <div class="modal-overlay" id="modelsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">AI Models</h2>
+                <button class="modal-close" id="modalClose">&times;</button>
+            </div>
+
+            <div class="model-list" id="modelList">
+                <!-- Model items will be inserted here -->
+            </div>
+
+            <hr style="margin: 2rem 0; border-color: var(--border);">
+
+            <h3 style="margin-bottom: 1rem; color: var(--accent);" id="formTitle">Add New Model</h3>
+            <form class="model-form" id="modelForm">
+                <input type="hidden" id="modelId" value="">
+                <label for="modelName">Model Name (e.g., DeepSeek Chat)</label>
+                <input type="text" id="modelName" placeholder="DeepSeek Chat" required>
+                
+                <label for="baseURL">API Base URL</label>
+                <input type="text" id="baseURL" placeholder="https://api.deepseek.com/v1/chat/completions" required>
+                
+                <label for="apiKey">API Key</label>
+                <input type="password" id="apiKey" placeholder="sk-..." required>
+                
+                <label for="modelModel">Model Identifier (e.g., deepseek-chat)</label>
+                <input type="text" id="modelModel" placeholder="deepseek-chat" required>
+                
+                <div style="display: flex; gap: 1rem;">
+                    <button type="submit" class="ask-button" style="margin: 0;">Save Model</button>
+                    <button type="button" class="models-button" id="cancelEdit" style="display: none;">Cancel Edit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         // State
         let currentProject = null;
         let projects = [];
+        let models = [];
+        let editingModelId = null;
 
         // DOM elements
         const projectTabsEl = document.getElementById('projectTabs');
@@ -409,6 +605,158 @@
         const answerTextEl = document.getElementById('answerText');
         const copyButton = document.getElementById('copyButton');
         const exampleChips = document.querySelectorAll('.chip');
+        // Model management
+        const modelSelector = document.getElementById('modelSelector');
+        const modelsButton = document.getElementById('modelsButton');
+        const modalClose = document.getElementById('modalClose');
+        const modelsModal = document.getElementById('modelsModal');
+        const modelList = document.getElementById('modelList');
+        const modelForm = document.getElementById('modelForm');
+        const cancelEditBtn = document.getElementById('cancelEdit');
+        const formTitle = document.getElementById('formTitle');
+        const modelIdInput = document.getElementById('modelId');
+        const modelNameInput = document.getElementById('modelName');
+        const baseURLInput = document.getElementById('baseURL');
+        const apiKeyInput = document.getElementById('apiKey');
+        const modelModelInput = document.getElementById('modelModel');
+
+        // Load models and populate dropdown
+        async function loadModels() {
+            try {
+                const res = await fetch('/api/models');
+                if (!res.ok) throw new Error('Failed to load models');
+                models = await res.json();
+                renderModelList();
+                populateModelSelector();
+            } catch (err) {
+                console.error('Could not load models:', err);
+                // Keep default empty
+            }
+        }
+
+        // Render model list in modal
+        function renderModelList() {
+            modelList.innerHTML = '';
+            if (models.length === 0) {
+                modelList.innerHTML = '<div class="no-models">No saved models. Add one below.</div>';
+                return;
+            }
+            models.forEach(model => {
+                const item = document.createElement('div');
+                item.className = 'model-item';
+                item.innerHTML = `
+                    <div class="model-item-info">
+                        <strong>${model.name}</strong>
+                        <small>${model.baseURL}</small>
+                        <small>Model: ${model.modelName}</small>
+                    </div>
+                    <div class="model-item-actions">
+                        <button class="edit-model" data-id="${model.id}">Edit</button>
+                        <button class="delete-model" data-id="${model.id}">Delete</button>
+                    </div>
+                `;
+                modelList.appendChild(item);
+            });
+            // Attach event listeners
+            document.querySelectorAll('.edit-model').forEach(btn => {
+                btn.addEventListener('click', () => editModel(btn.dataset.id));
+            });
+            document.querySelectorAll('.delete-model').forEach(btn => {
+                btn.addEventListener('click', () => deleteModel(btn.dataset.id));
+            });
+        }
+
+        // Populate model selector dropdown
+        function populateModelSelector() {
+            modelSelector.innerHTML = '<option value="">DeepSeek (default)</option>';
+            models.forEach(model => {
+                const option = document.createElement('option');
+                option.value = model.id;
+                option.textContent = `${model.name} (${model.modelName})`;
+                modelSelector.appendChild(option);
+            });
+        }
+
+        // Open modal
+        function openModal() {
+            modelsModal.style.display = 'flex';
+        }
+
+        // Close modal
+        function closeModal() {
+            modelsModal.style.display = 'none';
+            resetForm();
+        }
+
+        // Reset form to add new model
+        function resetForm() {
+            editingModelId = null;
+            formTitle.textContent = 'Add New Model';
+            modelIdInput.value = '';
+            modelNameInput.value = '';
+            baseURLInput.value = '';
+            apiKeyInput.value = '';
+            modelModelInput.value = '';
+            cancelEditBtn.style.display = 'none';
+        }
+
+        // Edit model
+        function editModel(id) {
+            const model = models.find(m => m.id === id);
+            if (!model) return;
+            editingModelId = id;
+            formTitle.textContent = 'Edit Model';
+            modelIdInput.value = model.id;
+            modelNameInput.value = model.name;
+            baseURLInput.value = model.baseURL;
+            apiKeyInput.value = model.apiKey;
+            modelModelInput.value = model.modelName;
+            cancelEditBtn.style.display = 'inline-block';
+        }
+
+        // Delete model
+        async function deleteModel(id) {
+            if (!confirm('Are you sure you want to delete this model?')) return;
+            try {
+                const res = await fetch(`/api/models/${id}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error('Delete failed');
+                await loadModels(); // refresh list
+            } catch (err) {
+                alert('Failed to delete model: ' + err.message);
+            }
+        }
+
+        // Form submit handler
+        async function handleModelSubmit(e) {
+            e.preventDefault();
+            const modelData = {
+                name: modelNameInput.value.trim(),
+                baseURL: baseURLInput.value.trim(),
+                apiKey: apiKeyInput.value.trim(),
+                modelName: modelModelInput.value.trim()
+            };
+            if (!modelData.name || !modelData.baseURL || !modelData.apiKey || !modelData.modelName) {
+                alert('Please fill all fields.');
+                return;
+            }
+            try {
+                const url = editingModelId ? `/api/models/${editingModelId}` : '/api/models';
+                const method = editingModelId ? 'PUT' : 'POST';
+                const res = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(modelData)
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.error || 'Request failed');
+                }
+                closeModal();
+                await loadModels();
+            } catch (err) {
+                alert('Failed to save model: ' + err.message);
+            }
+        }
 
         // Fetch projects on load
         async function fetchProjects() {
@@ -501,10 +849,13 @@
             askButton.disabled = true;
 
             try {
+                const modelId = modelSelector.value;
+                const requestBody = { project: currentProject, question };
+                if (modelId) requestBody.modelId = modelId;
                 const res = await fetch('/query', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ project: currentProject, question })
+                    body: JSON.stringify(requestBody)
                 });
 
                 if (!res.ok) {
@@ -556,7 +907,14 @@
             });
         });
 
+        // Event listeners for model management
+        modelsButton.addEventListener('click', openModal);
+        modalClose.addEventListener('click', closeModal);
+        modelForm.addEventListener('submit', handleModelSubmit);
+        cancelEditBtn.addEventListener('click', resetForm);
+
         // Initialize
+        loadModels();
         fetchProjects();
     </script>
 </body>
