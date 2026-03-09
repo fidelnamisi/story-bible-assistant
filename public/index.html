@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Story Bible Assistant</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Courier+Prime:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #111111;
+            --text-primary: #e8e0d0;
+            --text-secondary: #b8b0a0;
+            --accent: #c9953a;
+            --accent-dark: #a87a2a;
+            --border: #333333;
+            --surface: #1a1a1a;
+            --surface-light: #242424;
+            --error: #ff6b6b;
+            --success: #51cf66;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header */
+        header {
+            background-color: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-inner {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-weight: 600;
+            font-size: 1.5rem;
+            letter-spacing: 0.05em;
+            text-transform: lowercase;
+            font-variant: small-caps;
+            color: var(--accent);
+        }
+
+        .project-pill {
+            background-color: var(--surface-light);
+            border: 1px solid var(--border);
+            border-radius: 2rem;
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .project-pill .project-name {
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .project-pill .file-count {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        /* Project tabs */
+        .project-section {
+            margin-top: 2rem;
+        }
+
+        .project-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .project-tab {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .project-tab:hover {
+            background-color: var(--surface-light);
+            color: var(--text-primary);
+        }
+
+        .project-tab.active {
+            background-color: var(--accent);
+            color: #111;
+            border-color: var(--accent);
+            font-weight: 600;
+        }
+
+        .file-info {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            min-height: 1.2rem;
+        }
+
+        .note {
+            font-style: italic;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+        }
+
+        /* Query panel */
+        .query-panel {
+            background-color: var(--surface);
+            border-radius: 0.75rem;
+            border: 1px solid var(--border);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .query-panel h2 {
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+            color: var(--accent);
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 150px;
+            background-color: var(--surface-light);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            color: var(--text-primary);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+            padding: 1rem;
+            resize: vertical;
+            margin-bottom: 1.5rem;
+            transition: border-color 0.2s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .example-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-bottom: 2rem;
+        }
+
+        .chip {
+            background-color: var(--surface-light);
+            border: 1px solid var(--border);
+            border-radius: 2rem;
+            padding: 0.6rem 1.2rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .chip:hover {
+            background-color: var(--accent);
+            color: #111;
+            border-color: var(--accent);
+        }
+
+        .ask-button {
+            background-color: var(--accent);
+            color: #111;
+            border: none;
+            border-radius: 0.5rem;
+            padding: 1rem 2rem;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.2s;
+        }
+
+        .ask-button:hover {
+            background-color: var(--accent-dark);
+        }
+
+        .ask-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .error-message {
+            color: var(--error);
+            margin-top: 1rem;
+            padding: 0.75rem;
+            background-color: rgba(255, 107, 107, 0.1);
+            border-radius: 0.5rem;
+            display: none;
+        }
+
+        .loading {
+            color: var(--accent);
+            font-size: 1.1rem;
+            text-align: center;
+            padding: 2rem;
+            display: none;
+        }
+
+        .loading::after {
+            content: '';
+            animation: ellipsis 1.5s infinite;
+        }
+
+        @keyframes ellipsis {
+            0% { content: ''; }
+            25% { content: '.'; }
+            50% { content: '..'; }
+            75% { content: '...'; }
+            100% { content: ''; }
+        }
+
+        /* Answer panel */
+        .answer-panel {
+            background-color: var(--surface);
+            border-radius: 0.75rem;
+            border: 1px solid var(--border);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            display: none;
+            position: relative;
+        }
+
+        .answer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .answer-project {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .copy-button {
+            background-color: var(--surface-light);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .copy-button:hover {
+            background-color: var(--accent);
+            color: #111;
+            border-color: var(--accent);
+        }
+
+        .answer-text {
+            font-family: 'Courier Prime', monospace;
+            background-color: var(--surface-light);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            white-space: pre-wrap;
+            line-height: 1.7;
+            border-left: 4px solid var(--accent);
+        }
+
+        .footer {
+            text-align: center;
+            padding: 2rem 0;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border);
+            margin-top: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .header-inner {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+
+            .project-tabs {
+                flex-direction: column;
+            }
+
+            .project-tab {
+                width: 100%;
+                text-align: left;
+            }
+
+            .example-chips {
+                flex-direction: column;
+            }
+
+            .chip {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container header-inner">
+            <div class="logo">Story Bible Assistant</div>
+            <div class="project-pill">
+                <span class="project-name">No project selected</span>
+                <span class="file-count">· 0 files</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="project-section">
+            <div class="project-tabs" id="projectTabs">
+                <!-- Project tabs will be inserted here -->
+            </div>
+            <div class="file-info" id="fileInfo">
+                <!-- File info will appear here -->
+            </div>
+            <p class="note">To add a new project, create a folder inside the projects/ directory and drop your files in.</p>
+        </section>
+
+        <section class="query-panel">
+            <h2>Ask about the story</h2>
+            <textarea id="questionInput" placeholder="e.g. How does the young prince address his stepmother in dialogue — formally, or by name?" rows="5"></textarea>
+
+            <div class="example-chips">
+                <div class="chip" data-question="How do [Character A] and [Character B] address each other in dialogue?">How do [Character A] and [Character B] address each other in dialogue?</div>
+                <div class="chip" data-question="What past events between these two characters might cause tension in a new scene?">What past events between these two characters might cause tension in a new scene?</div>
+                <div class="chip" data-question="What are the recurring catchphrases or speech patterns of [Character]?">What are the recurring catchphrases or speech patterns of [Character]?</div>
+                <div class="chip" data-question="What is the full relationship history between [Character A] and [Character B] across all episodes?">What is the full relationship history between [Character A] and [Character B] across all episodes?</div>
+            </div>
+
+            <button id="askButton" class="ask-button">Ask</button>
+            <div class="error-message" id="errorMessage"></div>
+            <div class="loading" id="loadingIndicator">Searching source files</div>
+        </section>
+
+        <section class="answer-panel" id="answerPanel">
+            <div class="answer-header">
+                <div class="answer-project" id="answerProject"></div>
+                <button class="copy-button" id="copyButton">Copy Answer</button>
+            </div>
+            <div class="answer-text" id="answerText"></div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>Story Bible Assistant – A writer's research tool. All queries are sent to the DeepSeek API.</p>
+            <p>Files are read fresh on each request; no data is stored between sessions.</p>
+        </div>
+    </footer>
+
+    <script>
+        // State
+        let currentProject = null;
+        let projects = [];
+
+        // DOM elements
+        const projectTabsEl = document.getElementById('projectTabs');
+        const fileInfoEl = document.getElementById('fileInfo');
+        const projectPillName = document.querySelector('.project-name');
+        const projectPillCount = document.querySelector('.file-count');
+        const questionInput = document.getElementById('questionInput');
+        const askButton = document.getElementById('askButton');
+        const errorMessageEl = document.getElementById('errorMessage');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const answerPanel = document.getElementById('answerPanel');
+        const answerProjectEl = document.getElementById('answerProject');
+        const answerTextEl = document.getElementById('answerText');
+        const copyButton = document.getElementById('copyButton');
+        const exampleChips = document.querySelectorAll('.chip');
+
+        // Fetch projects on load
+        async function fetchProjects() {
+            try {
+                const res = await fetch('/projects');
+                if (!res.ok) throw new Error('Failed to load projects');
+                const data = await res.json();
+                projects = data.projects || [];
+                renderProjectTabs();
+                if (projects.length > 0) {
+                    selectProject(projects[0]);
+                } else {
+                    updateFileInfo('No projects found. Create a folder inside projects/ directory.');
+                }
+            } catch (err) {
+                console.error(err);
+                updateFileInfo('Could not load projects. Make sure the server is running.');
+            }
+        }
+
+        // Render project tabs
+        function renderProjectTabs() {
+            projectTabsEl.innerHTML = '';
+            projects.forEach(project => {
+                const button = document.createElement('button');
+                button.className = 'project-tab';
+                if (project === currentProject) button.classList.add('active');
+                button.textContent = project;
+                button.addEventListener('click', () => selectProject(project));
+                projectTabsEl.appendChild(button);
+            });
+        }
+
+        // Select a project
+        async function selectProject(project) {
+            currentProject = project;
+            renderProjectTabs();
+
+            // Update pill
+            projectPillName.textContent = project;
+            projectPillCount.textContent = '· … files';
+
+            // Clear previous answer
+            answerPanel.style.display = 'none';
+            errorMessageEl.style.display = 'none';
+
+            // Fetch status
+            try {
+                const res = await fetch(`/status/${encodeURIComponent(project)}`);
+                if (!res.ok) throw new Error('Project not found');
+                const data = await res.json();
+                projectPillCount.textContent = `· ${data.filesLoaded} files`;
+                updateFileInfo(`Loaded ${data.filesLoaded} files (${data.totalCharacters} characters): ${data.fileNames.join(', ')}`);
+            } catch (err) {
+                console.error(err);
+                projectPillCount.textContent = '· 0 files';
+                updateFileInfo('Could not load project files.');
+            }
+        }
+
+        // Update file info line
+        function updateFileInfo(text) {
+            fileInfoEl.textContent = text;
+        }
+
+        // Example chips click
+        exampleChips.forEach(chip => {
+            chip.addEventListener('click', () => {
+                questionInput.value = chip.getAttribute('data-question');
+                questionInput.focus();
+            });
+        });
+
+        // Ask button click
+        askButton.addEventListener('click', async () => {
+            if (!currentProject) {
+                showError('Please select a project first.');
+                return;
+            }
+            const question = questionInput.value.trim();
+            if (!question) {
+                showError('Please enter a question.');
+                return;
+            }
+
+            // Clear previous
+            errorMessageEl.style.display = 'none';
+            answerPanel.style.display = 'none';
+            loadingIndicator.style.display = 'block';
+            askButton.disabled = true;
+
+            try {
+                const res = await fetch('/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ project: currentProject, question })
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.error || 'Request failed');
+                }
+
+                const data = await res.json();
+                showAnswer(data.answer, data.project);
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                loadingIndicator.style.display = 'none';
+                askButton.disabled = false;
+            }
+        });
+
+        // Show answer
+        function showAnswer(answer, project) {
+            answerProjectEl.textContent = `Answer for ${project}`;
+            answerTextEl.textContent = answer;
+            answerPanel.style.display = 'block';
+            // Scroll to answer
+            answerPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // Show error
+        function showError(message) {
+            errorMessageEl.textContent = message;
+            errorMessageEl.style.display = 'block';
+            errorMessageEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // Copy answer
+        copyButton.addEventListener('click', () => {
+            const text = answerTextEl.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const original = copyButton.textContent;
+                copyButton.textContent = 'Copied!';
+                copyButton.style.backgroundColor = 'var(--success)';
+                copyButton.style.color = '#111';
+                setTimeout(() => {
+                    copyButton.textContent = original;
+                    copyButton.style.backgroundColor = '';
+                    copyButton.style.color = '';
+                }, 2000);
+            }).catch(err => {
+                console.error('Copy failed:', err);
+            });
+        });
+
+        // Initialize
+        fetchProjects();
+    </script>
+</body>
+</html>
