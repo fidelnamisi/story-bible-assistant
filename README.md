@@ -1,66 +1,153 @@
 # Story Bible Assistant
 
-A writer's research tool that lets you query source files across multiple story projects using the DeepSeek API. Each project is isolated; their files never mix.
+<div align="center">
 
-## First-time setup
+![Node.js](https://img.shields.io/badge/Node.js-18.x-green?logo=node.js)
+![Express](https://img.shields.io/badge/Express-4.x-lightgrey?logo=express)
+![License](https://img.shields.io/badge/License-MIT-blue.svg)
+![Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen)
 
-1. **Set your DeepSeek API key**  
-   Open `.env` and replace `your_api_key_here` with your actual DeepSeek API key.
+**A writer's research tool that queries source files across multiple story projects using AI. Each project is isolated; their files never mix.**
 
-2. **Install dependencies**  
-   Open a terminal in this folder and run:
-   ```bash
-   npm install
-   ```
+</div>
 
-3. **Start the server**  
-   Run:
-   ```bash
-   npm start
-   ```
-   The server will start on port 3333.
+## 🎬 What is this?
 
-4. **Open the app**  
-   In your browser, go to [http://localhost:3333](http://localhost:3333).
+Story Bible Assistant is a local web app for TV series writers, novelists, and story developers. It lets you ask natural‑language questions about your story materials (scripts, treatments, character bios, world‑building documents) and get concise, accurate answers drawn **only** from the selected project’s files.
 
-## Adding a new project
+Think of it as a private research assistant that never mixes up your projects and never invents details—everything it says comes directly from the source texts you provide.
 
-1. Create a new folder inside the `projects/` directory, named after your story (e.g., `Snow‑White`).
-2. Drop your source files into that folder.
-3. Refresh the browser — the new project appears automatically in the project selector.
+## ✨ Features
 
-## Adding files to an existing project
+- **Project‑based isolation** – Each story lives in its own folder; queries see only that project’s files.
+- **Multi‑format support** – Reads `.txt`, `.md`, `.docx`, and `.pdf` files automatically.
+- **No database** – Files are read fresh on every query; no persistent storage required.
+- **Clean, focused UI** – Dark professional design tailored for long writing sessions.
+- **DeepSeek API integration** – Uses the `deepseek‑chat` model for fast, cost‑effective answers.
+- **Live file stats** – See at a glance how many files are loaded and their total character count.
+- **Example questions** – One‑click fill with typical writerly queries (character relationships, dialogue patterns, backstory tension).
 
-Simply drop new `.txt`, `.md`, `.docx` or `.pdf` files into the project folder at any time. No restart needed — files are read fresh on every query.
+## 🚀 Quick Start
 
-## Supported file types
+### 1. Clone & install
+```bash
+git clone https://github.com/fidelnamisi/story-bible-assistant.git
+cd story-bible-assistant
+npm install
+```
 
-- `.txt` – plain text files
-- `.md` – Markdown files
-- `.docx` – Microsoft Word documents
-- `.pdf` – PDF documents
+### 2. Set your API key
+Edit `.env` and replace `your_api_key_here` with your [DeepSeek API key](https://platform.deepseek.com/api_keys).
 
-All other file types are silently skipped.
+### 3. Run the server
+```bash
+npm start
+```
+The app will be available at **http://localhost:3333**.
 
-## Tips
+### 4. Add your story files
+Create a folder inside `projects/` (e.g., `projects/My‑Novel/`) and drop your `.txt`, `.md`, `.docx`, or `.pdf` files into it.  
+Refresh the browser – your project appears automatically.
 
-- **File order** – Files are read alphabetically. If you hit the context‑length limit, prefix critical files with `1_` or `A_` to ensure they are included first.
-- **Question specificity** – Keep your questions focused and specific for the best results.
-- **Project isolation** – The system never mixes files between projects. Each query only sees files from the selected project.
-- **Running the app** – Keep the terminal window open while you work. The app runs entirely locally; the only thing sent externally is your question and source text to the DeepSeek API.
+## 📁 Project Structure
 
-## How it works
+```
+story‑bible‑assistant/
+├── server.js                 # Express backend with three endpoints
+├── package.json             # Dependencies and scripts
+├── .env                     # API key (git‑ignored)
+├── public/
+│   └── index.html           # Single‑page frontend (CSS + JS embedded)
+└── projects/                # Isolated story projects
+    ├── Cinderella/
+    ├── Little‑Red‑Writing‑Hood/
+    └── Emperors‑New‑Clothes/
+    └── … (add your own)
+```
 
-- **Backend**: Node.js + Express server that reads files from disk, extracts text, and calls the DeepSeek API.
-- **Frontend**: A single HTML page with vanilla JavaScript that fetches projects, displays file stats, and sends queries.
-- **No database** – all file reading happens on‑the‑fly for each query.
+## 🧠 How It Works
 
-## API endpoints
+### Backend (`server.js`)
+- **`GET /projects`** – Lists all project folders.
+- **`GET /status/:project`** – Returns file count, total characters, and file names for a project.
+- **`POST /query`** – Accepts a project name and a question, reads the project’s files, calls the DeepSeek API, and returns the answer.
 
-- `GET /projects` – returns a list of project folder names.
-- `GET /status/:project` – returns file count, total characters, and file names for a project.
-- `POST /query` – submits a question about a project and returns an AI‑generated answer.
+The helper function `readProjectFiles()` extracts plain text from each supported file type, concatenates them with clear file headers, and truncates to 120 000 characters if needed to fit the model’s context window.
 
-## License
+### Frontend (`public/index.html`)
+- Fetches and displays projects as clickable tabs.
+- Shows live file stats in the header pill.
+- Provides example‑question chips for quick input.
+- Sends queries and displays answers in a monospace box with a copy‑to‑clipboard button.
+- Fully responsive design with a dark, distraction‑free theme.
 
-MIT
+## 🔐 Privacy & Data Flow
+
+- All file reading happens locally on your machine.
+- The only data sent externally is your **question** and the **extracted text** of the selected project’s files to the DeepSeek API.
+- No data is stored between sessions; files are re‑read on every query.
+- The `.env` file (containing your API key) is excluded from Git.
+
+## 💡 Tips for Best Results
+
+- **Prefix critical files** with `1_` or `A_` to ensure they are read first (files are processed alphabetically).
+- **Keep questions specific** – “How does Character X address Character Y in Act 2?” works better than “Tell me about their relationship.”
+- **Add context headers** – Inside your source files, use clear headings like `## CHARACTER: ALICE` to help the AI locate answers.
+- **Monitor token usage** – The system truncates at 120 000 characters; if your project is large, split files by topic or episode.
+
+## 🛠 API Reference
+
+### `GET /projects`
+**Response**
+```json
+{
+  "projects": ["Cinderella", "Little‑Red‑Writing‑Hood", "Emperors‑New‑Clothes"]
+}
+```
+
+### `GET /status/:project`
+**Response**
+```json
+{
+  "project": "Cinderella",
+  "filesLoaded": 12,
+  "totalCharacters": 45678,
+  "fileNames": ["1_intro.txt", "character_bios.docx", "episode_1.pdf"]
+}
+```
+
+### `POST /query`
+**Request**
+```json
+{
+  "project": "Cinderella",
+  "question": "How does the prince address his stepmother in dialogue?"
+}
+```
+**Response**
+```json
+{
+  "answer": "The prince always uses 'Your Majesty' in formal scenes…",
+  "project": "Cinderella"
+}
+```
+
+## 🧪 Running in Development
+
+To auto‑restart the server on file changes, install `nodemon` globally and use:
+```bash
+npm run dev
+```
+(Adds a `dev` script that uses `nodemon server.js`.)
+
+## 📄 License
+
+MIT – see the [LICENSE](LICENSE) file for details.
+
+## 🙋‍♂️ Need Help?
+
+Open an [issue](https://github.com/fidelnamisi/story-bible-assistant/issues) on GitHub or fork the repository and adapt it to your own workflow.
+
+---
+
+*Built for writers who want to keep their story worlds straight.*
